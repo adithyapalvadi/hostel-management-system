@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:5000/api' 
+    : '/api';
 
 // Schema Definition for dynamic tables and forms
 // Every table now includes all attributes, including Primary Keys
