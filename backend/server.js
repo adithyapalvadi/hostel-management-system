@@ -8,7 +8,9 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static frontend files
-app.use(express.static(path.join(__dirname, '../frontend')));
+const frontendPath = path.join(__dirname, '../frontend');
+console.log('Serving static files from:', frontendPath);
+app.use(express.static(frontendPath));
 
 // List of allowed tables mapped to their Primary Keys to strictly prevent SQL Injection
 const allowedTables = {
@@ -123,6 +125,6 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Backend Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend Server running on http://0.0.0.0:${PORT}`);
 });
