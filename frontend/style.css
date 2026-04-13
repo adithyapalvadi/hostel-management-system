@@ -102,7 +102,23 @@ body { background: var(--bg-color); color: var(--text-main); height: 100vh; over
 .table-container { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: 0 8px 24px rgba(112, 144, 176, 0.08); overflow-x: auto; }
 
 table { width: 100%; border-collapse: collapse; min-width: 800px; }
-th { text-align: left; padding: 16px; color: #8f9bba; font-size: 13px; font-weight: 600; border-bottom: 2px solid var(--border); text-transform: uppercase; letter-spacing: 0.5px;}
+th { 
+    text-align: left; 
+    padding: 16px; 
+    color: #8f9bba; 
+    font-size: 13px; 
+    font-weight: 600; 
+    border-bottom: 2px solid var(--border); 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+th:hover { background: #f8f9fc; }
+th .sort-icon { margin-left: 8px; font-size: 10px; opacity: 0.5; }
+th.active-sort { color: var(--primary); }
+th.active-sort .sort-icon { opacity: 1; }
 td { padding: 16px; color: var(--text-main); font-size: 14px; border-bottom: 1px solid var(--border); font-weight: 500;}
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8f9fc; }

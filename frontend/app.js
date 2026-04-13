@@ -63,7 +63,7 @@ const schemas = {
             { name: 'student_id', label: 'Student ID', type: 'text', isPk: true, autoInc: false },
             { name: 'name', label: 'Student Name', type: 'text', required: true },
             { name: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
-            { name: 'department', label: 'Department', type: 'text', required: true },
+            { name: 'department', label: 'Department', type: 'select', options: ['CSE', 'ECE', 'MECH', 'EEE', 'CIVIL', 'IT'], required: true },
             { name: 'phone', label: 'Phone', type: 'text', required: true },
             { name: 'email', label: 'Email', type: 'email', required: true }
         ]
@@ -83,7 +83,7 @@ const schemas = {
         fields: [
             { name: 'visitor_id', label: 'Visitor ID', type: 'number', isPk: true, autoInc: false },
             { name: 'visitor_name', label: 'Visitor Name', type: 'text', required: true },
-            { name: 'relation', label: 'Relation', type: 'text', required: true },
+            { name: 'relation', label: 'Relation', type: 'select', options: ['Father', 'Mother', 'Local Guardian', 'Sibling', 'Friend', 'Other'], required: true },
             { name: 'phone', label: 'Phone', type: 'text', required: true },
             { name: 'student_id', label: 'Student ID', type: 'text', required: true }
         ]
@@ -103,7 +103,7 @@ const schemas = {
         fields: [
             { name: 'complaint_id', label: 'Complaint ID', type: 'number', isPk: true, autoInc: false },
             { name: 'student_id', label: 'Student ID', type: 'text', required: true },
-            { name: 'complaint_type', label: 'Complaint Type', type: 'text', required: true },
+            { name: 'complaint_type', label: 'Complaint Type', type: 'select', options: ['Maintenance', 'Food', 'Security', 'Hygiene', 'Electrical', 'Other'], required: true },
             { name: 'description', label: 'Description', type: 'text', required: true },
             { name: 'complaint_date', label: 'Complaint Date', type: 'date', required: true },
             { name: 'status', label: 'Status', type: 'select', options: ['Pending', 'In Progress', 'Resolved', 'Rejected'] }
@@ -125,6 +125,8 @@ const schemas = {
 let currentTable = 'hostel';
 let editId = null;
 let allData = []; // Store full dataset for searching
+let currentSortCol = null;
+let isAsc = true;
 
 // DOM Elements
 const navItems = document.querySelectorAll('.nav-item');
@@ -215,6 +217,7 @@ async function loadData() {
         }
         if (!response.ok) throw new Error('API Error');
         allData = await response.json();
+        currentSortCol = null; // Reset sort on table change
         renderTable(allData);
     } catch (err) {
         tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px; color:#ee5d50;">Failed to load data. Ensure the Node backend (localhost:5000) and MySQL database are running.</td></tr>`;
@@ -232,6 +235,40 @@ function filterData(query) {
     renderTable(filtered);
 }
 
+// Function to sort data
+function handleSort(col) {
+    if (currentSortCol === col) {
+        isAsc = !isAsc;
+    } else {
+        currentSortCol = col;
+        isAsc = true;
+    }
+
+    const sortedData = [...allData].sort((a, b) => {
+        let valA = a[col];
+        let valB = b[col];
+
+        // Handle nulls
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+
+        // Numeric sort
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return isAsc ? valA - valB : valB - valA;
+        }
+
+        // String sort
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        
+        if (valA < valB) return isAsc ? -1 : 1;
+        if (valA > valB) return isAsc ? 1 : -1;
+        return 0;
+    });
+
+    renderTable(sortedData);
+}
+
 // Separate rendering logic from data loading
 function renderTable(data) {
     const schema = schemas[currentTable];
@@ -240,10 +277,14 @@ function renderTable(data) {
         // Dynamically build TH
         schema.fields.forEach(f => {
             const th = document.createElement('th');
-            th.innerText = f.label;
+            th.innerHTML = `${f.label} <span class="sort-icon">${currentSortCol === f.name ? (isAsc ? '▲' : '▼') : '↕'}</span>`;
+            if (currentSortCol === f.name) th.classList.add('active-sort');
+            
+            th.onclick = () => handleSort(f.name);
             tableHeaders.appendChild(th);
         });
         const actionsTh = document.createElement('th');
+        actionsTh.style.cursor = 'default';
         actionsTh.innerText = 'Actions';
         actionsTh.style.textAlign = 'right';
         tableHeaders.appendChild(actionsTh);
