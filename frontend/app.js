@@ -10,6 +10,22 @@ if (!localStorage.getItem('token')) {
 const getToken = () => localStorage.getItem('token');
 const getAuthHeader = () => ({ 'Authorization': `Bearer ${getToken()}` });
 
+// Toast Notification Logic
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // Schema Definition for dynamic tables and forms
 // Every table now includes all attributes, including Primary Keys
 const schemas = {
@@ -174,14 +190,15 @@ dynamicForm.addEventListener('submit', async (e) => {
 
         if(!response.ok) {
             const err = await response.json();
-            alert('Error: ' + (err.error || 'Failed to save changes. Check if the ID already exists!'));
+            showToast(err.error || 'Failed to save changes. Check if the ID already exists!', 'error');
             return;
         }
 
+        showToast(editId ? 'Record updated successfully!' : 'Record created successfully!', 'success');
         closeModal();
         loadData();
     } catch (err) {
-        alert('Network request failed. Is the backend running?');
+        showToast('Network request failed. Is the backend running?', 'error');
     }
 });
 
@@ -245,11 +262,28 @@ function renderTable(data) {
                 let val = row[f.name];
                 // Cleanup dates (only for ISO date strings)
                 if (val && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-                    val = val.split('T')[0]; 
+                    const parts = val.split('T');
+                    const datePart = parts[0]; // YYYY-MM-DD
+                    const timePart = parts[1] ? parts[1].split('.')[0] : ''; // HH:MM:SS
+                    
+                    const [y, m, d] = datePart.split('-');
+                    val = `${d}-${m}-${y}${timePart ? ' ' + timePart : ''}`; 
                 }
-                // Strong 0 handling incase of 0 capacity or 0 price
+                // Strong 0 handling
                 if (val === 0) val = '0';
-                td.innerText = (val !== null && val !== undefined && val !== '') ? val : '-';
+
+                // Status Badge Logic
+                if (f.name === 'status' && val) {
+                    let badgeClass = 'badge-pending';
+                    const lowerVal = String(val).toLowerCase();
+                    if (lowerVal.includes('resolved') || lowerVal === 'paid') badgeClass = 'badge-resolved';
+                    else if (lowerVal.includes('progress')) badgeClass = 'badge-progress';
+                    else if (lowerVal.includes('rejected') || lowerVal === 'unpaid') badgeClass = 'badge-rejected';
+                    
+                    td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
+                } else {
+                    td.innerText = (val !== null && val !== undefined && val !== '') ? val : '-';
+                }
                 tr.appendChild(td);
             });
 
@@ -335,12 +369,13 @@ async function deleteRecord(id) {
         });
         if(!response.ok) {
             const err = await response.json();
-            alert('Failed to delete: ' + (err.error || 'Server error'));
+            showToast('Failed to delete: ' + (err.error || 'Server error'), 'error');
             return;
         }
+        showToast('Record deleted successfully!', 'error');
         loadData();
     } catch(err) {
-        alert('Network request failed. Is the backend running?');
+        showToast('Network request failed. Is the backend running?', 'error');
     }
 }
 

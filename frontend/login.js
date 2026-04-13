@@ -9,6 +9,22 @@ const authBtn = document.getElementById('auth-btn');
 const authToggle = document.getElementById('auth-toggle');
 const errorBox = document.getElementById('error-box');
 
+// Toast Notification Logic
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 let isLogin = true;
 
 authToggle.addEventListener('click', () => {
@@ -39,23 +55,22 @@ authForm.addEventListener('submit', async (e) => {
         const data = await response.json();
         
         if (!response.ok) {
-            errorBox.innerText = data.error || 'Something went wrong';
-            errorBox.style.display = 'block';
+            showToast(data.error || 'Something went wrong', 'error');
             return;
         }
         
         if (isLogin) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            window.location.href = 'index.html';
+            showToast('Login successful! Redirecting...', 'success');
+            setTimeout(() => window.location.href = 'index.html', 1000);
         } else {
-            alert('Registration successful! Please sign in.');
+            showToast('Registration successful! Please sign in.', 'success');
             isLogin = true;
             authToggle.click(); // Reset to login view
         }
         
     } catch (err) {
-        errorBox.innerText = 'Server connection failed.';
-        errorBox.style.display = 'block';
+        showToast('Server connection failed.', 'error');
     }
 });
