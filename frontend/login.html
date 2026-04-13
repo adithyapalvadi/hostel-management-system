@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Hostel Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1c2d 0%, #0c0e1b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #232a3e;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-card h2 {
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .login-card p {
+            color: #8f9bba;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #8f9bba;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            background: #1a1c2d;
+            border: 1px solid #3d4663;
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+        }
+        .btn-full {
+            width: 100%;
+            padding: 14px;
+            background: #4a5dff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-full:hover {
+            background: #3948cc;
+        }
+        .error-msg {
+            color: #ff4d4d;
+            font-size: 14px;
+            margin-top: 15px;
+            display: none;
+        }
+        .toggle-link {
+            color: #4a5dff;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo" style="margin-bottom: 20px;">
+            <h2 style="font-size: 28px;">Hostel<span style="color:#4a5dff">Pro</span></h2>
+        </div>
+        <h2 id="auth-title">Welcome Back</h2>
+        <p id="auth-subtitle">Please enter your details to sign in.</p>
+        
+        <form id="auth-form">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" class="form-control" required placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" class="form-control" required placeholder="Enter password">
+            </div>
+            <button type="submit" class="btn-full" id="auth-btn">Sign In</button>
+            <div id="error-box" class="error-msg"></div>
+        </form>
+
+        <span class="toggle-link" id="auth-toggle">Don't have an account? Register</span>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

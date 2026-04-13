@@ -1,11 +1,64 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const pool = require('./db');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_hostel_key';
+
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid or expired token.' });
+        req.user = user;
+        next();
+    });
+};
+
+// --- AUTH ROUTES ---
+
+// Registration
+app.post('/api/auth/register', async (req, res) => {
+    const { username, password, role } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await pool.query('INSERT INTO USERS (username, password, role) VALUES (?, ?, ?)', [username, hashedPassword, role || 'Manager']);
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const [rows] = await pool.query('SELECT * FROM USERS WHERE username = ?', [username]);
+        if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+
+        const user = rows[0];
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
+
+        const token = jwt.sign({ id: user.user_id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+        res.json({ token, user: { username: user.username, role: user.role } });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Serve static frontend files
 const frontendPath = path.join(__dirname, '../frontend');
@@ -26,7 +79,7 @@ const allowedTables = {
 };
 
 // Generic GET all
-app.get('/api/:table', async (req, res) => {
+app.get('/api/:table', authenticateToken, async (req, res) => {
     const table = req.params.table.toLowerCase();
     if (!allowedTables[table]) return res.status(400).json({ error: 'Invalid table' });
     
@@ -39,7 +92,7 @@ app.get('/api/:table', async (req, res) => {
 });
 
 // Generic GET by ID
-app.get('/api/:table/:id', async (req, res) => {
+app.get('/api/:table/:id', authenticateToken, async (req, res) => {
     const table = req.params.table.toLowerCase();
     if (!allowedTables[table]) return res.status(400).json({ error: 'Invalid table' });
     const pk = allowedTables[table];
@@ -54,7 +107,7 @@ app.get('/api/:table/:id', async (req, res) => {
 });
 
 // Generic POST (Create)
-app.post('/api/:table', async (req, res) => {
+app.post('/api/:table', authenticateToken, async (req, res) => {
     const table = req.params.table.toLowerCase();
     if (!allowedTables[table]) return res.status(400).json({ error: 'Invalid table' });
 
@@ -76,7 +129,7 @@ app.post('/api/:table', async (req, res) => {
 });
 
 // Generic PUT (Update)
-app.put('/api/:table/:id', async (req, res) => {
+app.put('/api/:table/:id', authenticateToken, async (req, res) => {
     const table = req.params.table.toLowerCase();
     if (!allowedTables[table]) return res.status(400).json({ error: 'Invalid table' });
     const pk = allowedTables[table];
@@ -91,7 +144,6 @@ app.put('/api/:table/:id', async (req, res) => {
     const sql = `UPDATE ${table} SET ${setClause} WHERE ${pk} = ?`;
 
     try {
-        // Values array needs ID appended at the end for the WHERE clause
         const [result] = await pool.query(sql, [...values, req.params.id]);
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found or no changes made' });
         res.json({ message: 'Updated successfully' });
@@ -101,7 +153,7 @@ app.put('/api/:table/:id', async (req, res) => {
 });
 
 // Generic DELETE
-app.delete('/api/:table/:id', async (req, res) => {
+app.delete('/api/:table/:id', authenticateToken, async (req, res) => {
     const table = req.params.table.toLowerCase();
     if (!allowedTables[table]) return res.status(400).json({ error: 'Invalid table' });
     const pk = allowedTables[table];
@@ -111,9 +163,8 @@ app.delete('/api/:table/:id', async (req, res) => {
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
         res.json({ message: 'Deleted successfully' });
     } catch (err) {
-        // Handle Foreign Key Constraint errors smoothly
         if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(409).json({ error: 'Cannot delete because this record is tied to other data (Foreign Key validation).' });
+            return res.status(409).json({ error: 'Cannot delete because this record is tied to other data.' });
         }
         res.status(500).json({ error: err.message });
     }

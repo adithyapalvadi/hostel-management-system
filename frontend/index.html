@@ -25,6 +25,9 @@
                 <button class="nav-item" data-table="fine">Fines</button>
                 <button class="nav-item" data-table="zip">Zips</button>
             </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn-logout">Logout</button>
+            </div>
         </aside>
 
         <!-- Main Content -->
@@ -34,7 +37,12 @@
                     <h1 id="page-title">Hostels</h1>
                     <p class="subtitle">Manage and track your operational data.</p>
                 </div>
-                <button id="add-new-btn" class="btn-primary">+ Add Record</button>
+                <div class="topbar-actions">
+                    <div class="search-box">
+                        <input type="text" id="global-search" placeholder="Search records...">
+                    </div>
+                    <button id="add-new-btn" class="btn-primary">+ Add Record</button>
+                </div>
             </header>
 
             <div class="content-body">

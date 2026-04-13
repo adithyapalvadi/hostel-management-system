@@ -2,6 +2,14 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
     ? 'http://localhost:5000/api' 
     : '/api';
 
+// Auth Guard: Redirect to login if no token
+if (!localStorage.getItem('token')) {
+    window.location.href = 'login.html';
+}
+
+const getToken = () => localStorage.getItem('token');
+const getAuthHeader = () => ({ 'Authorization': `Bearer ${getToken()}` });
+
 // Schema Definition for dynamic tables and forms
 // Every table now includes all attributes, including Primary Keys
 const schemas = {
@@ -100,6 +108,7 @@ const schemas = {
 
 let currentTable = 'hostel';
 let editId = null;
+let allData = []; // Store full dataset for searching
 
 // DOM Elements
 const navItems = document.querySelectorAll('.nav-item');
@@ -112,6 +121,8 @@ const dynamicForm = document.getElementById('dynamic-form');
 const formFieldsContainer = document.getElementById('form-fields');
 const addNewBtn = document.getElementById('add-new-btn');
 const modalTitle = document.getElementById('modal-title');
+const logoutBtn = document.getElementById('logout-btn');
+const globalSearch = document.getElementById('global-search');
 
 // Initialize Layout bindings
 navItems.forEach(item => {
@@ -126,6 +137,16 @@ navItems.forEach(item => {
 
 addNewBtn.addEventListener('click', () => openModal());
 closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
+
+logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+});
+
+globalSearch.addEventListener('input', (e) => {
+    filterData(e.target.value);
+});
 
 // Form submission logic (Handles Create and Update dynamically)
 dynamicForm.addEventListener('submit', async (e) => {
@@ -144,7 +165,10 @@ dynamicForm.addEventListener('submit', async (e) => {
         
         const response = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
             body: JSON.stringify(data)
         });
 
@@ -164,12 +188,37 @@ dynamicForm.addEventListener('submit', async (e) => {
 // Load table data and bind Add/Edit actions
 async function loadData() {
     try {
-        const response = await fetch(`${API_URL}/${currentTable}`);
+        const response = await fetch(`${API_URL}/${currentTable}`, {
+            headers: getAuthHeader()
+        });
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
         if (!response.ok) throw new Error('API Error');
-        const data = await response.json();
-        
-        const schema = schemas[currentTable];
-        tableHeaders.innerHTML = '';
+        allData = await response.json();
+        renderTable(allData);
+    } catch (err) {
+        tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px; color:#ee5d50;">Failed to load data. Ensure the Node backend (localhost:5000) and MySQL database are running.</td></tr>`;
+    }
+}
+
+// Function to filter data locally without refetching
+function filterData(query) {
+    const q = query.toLowerCase();
+    const filtered = allData.filter(row => {
+        return Object.values(row).some(val => 
+            String(val).toLowerCase().includes(q)
+        );
+    });
+    renderTable(filtered);
+}
+
+// Separate rendering logic from data loading
+function renderTable(data) {
+    const schema = schemas[currentTable];
+    tableHeaders.innerHTML = '';
         
         // Dynamically build TH
         schema.fields.forEach(f => {
@@ -194,8 +243,8 @@ async function loadData() {
             schema.fields.forEach(f => {
                 const td = document.createElement('td');
                 let val = row[f.name];
-                // Cleanup dates
-                if (val && typeof val === 'string' && val.includes('T')) {
+                // Cleanup dates (only for ISO date strings)
+                if (val && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
                     val = val.split('T')[0]; 
                 }
                 // Strong 0 handling incase of 0 capacity or 0 price
@@ -224,9 +273,6 @@ async function loadData() {
             tableBody.appendChild(tr);
         });
 
-    } catch (err) {
-        tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px; color:#ee5d50;">Failed to load data. Ensure the Node backend (localhost:5000) and MySQL database are running.</td></tr>`;
-    }
 }
 
 // Generate the modal form dynamically based on schema
@@ -251,7 +297,7 @@ function openModal(rowData = null) {
         const stepAttr = f.step ? `step="${f.step}"` : '';
         let val = isEdit ? rowData[f.name] : '';
         
-        if (val && typeof val === 'string' && val.includes('T') && f.type === 'date') val = val.split('T')[0];
+        if (val && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val) && f.type === 'date') val = val.split('T')[0];
         if (val === null || val === undefined) val = '';
 
         // All Primary keys become read-only ONLY during edit so we don't accidentally update the ID of an existing record
@@ -283,7 +329,10 @@ function closeModal() {
 async function deleteRecord(id) {
     if(!confirm('Are you certain you wish to delete this record? This action cannot be undone.')) return;
     try {
-        const response = await fetch(`${API_URL}/${currentTable}/${id}`, { method: 'DELETE' });
+        const response = await fetch(`${API_URL}/${currentTable}/${id}`, { 
+            method: 'DELETE',
+            headers: getAuthHeader()
+        });
         if(!response.ok) {
             const err = await response.json();
             alert('Failed to delete: ' + (err.error || 'Server error'));

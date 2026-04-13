@@ -82,6 +82,14 @@ CREATE TABLE IF NOT EXISTS FINE (
     FOREIGN KEY (complaint_id) REFERENCES COMPLAINT(complaint_id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS USERS (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('Admin', 'Manager') DEFAULT 'Manager',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 USE smart_hostel_db;
 
 -- ─────────────────────────────────────────
